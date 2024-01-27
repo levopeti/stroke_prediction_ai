@@ -1,7 +1,7 @@
 from torch.nn import Module
 
-from ai_utils.training_utils.pytorch_utils.nn_models.inception_time import InceptionTime
-from ai_utils.training_utils.pytorch_utils.nn_models.mlp import MLP
+from nn_models.inception_time import InceptionTime
+from nn_models.mlp import MLP
 
 
 def define_mlp_model(input_shape: int, output_shape: int, layer_sizes: list, **kwargs) -> Module:

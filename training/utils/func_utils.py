@@ -2,10 +2,11 @@ import copy
 import json
 import os
 import random
-from enum import Enum
-
 import numpy as np
 import pandas as pd
+from enum import Enum
+
+
 
 def save_params(params: dict):
     if params["model_checkpoint_folder_path"] is not None:
@@ -31,30 +32,33 @@ def calculate_diff(x_y_z, meas_type_acc) -> np.ndarray:
     assert len(result) > 0
     return result
 
+
 def get_diff(x_y_z, meas_type_acc, length=None, start_idx=None):
     cut_x_y_z = list()
     for array in x_y_z:
-      if length is not None:
-          assert length < len(array)
+        if length is not None:
+            assert length < len(array)
 
-          # start_idx = start_idx if start_idx is not None else random.randint(0, len(array) - (length + 1))
-          if start_idx > len(array) - (length + 1):
-              raise ValueError("start_idx is too large")
+            # start_idx = start_idx if start_idx is not None else random.randint(0, len(array) - (length + 1))
+            if start_idx > len(array) - (length + 1):
+                raise ValueError("start_idx is too large")
 
-          cut_x_y_z.append(array[start_idx:start_idx + length])
-      else:
-          cut_x_y_z = x_y_z
+            cut_x_y_z.append(array[start_idx:start_idx + length])
+        else:
+            cut_x_y_z = x_y_z
 
     result = calculate_diff(cut_x_y_z, meas_type_acc)
 
     assert len(result) > 0
     return result
 
+
 def get_limb_diff_mean(left_x_y_z, right_x_y_z, meas_type_acc, length=None, start_idx=None):
     left_diff = get_diff(left_x_y_z, meas_type_acc, length, start_idx)
     right_diff = get_diff(right_x_y_z, meas_type_acc, length, start_idx)
     result = np.abs(left_diff.mean() - right_diff.mean())
     return result
+
 
 def get_limb_ratio_mean(left_x_y_z, right_x_y_z, meas_type_acc,
                         class_value_left, class_value_right,
@@ -75,6 +79,7 @@ def get_limb_ratio_mean(left_x_y_z, right_x_y_z, meas_type_acc,
         else:
             result = np.mean(right_diff / left_diff)
     return result
+
 
 def get_input_from_df(meas_df: pd.DataFrame,
                       length: int,
@@ -102,8 +107,10 @@ def get_input_from_df(meas_df: pd.DataFrame,
         # TODO: perform cut with previously defined length and start_idx
         raise NotImplementedError
         diff_mean = get_limb_diff_mean(left_x_y_z, right_x_y_z, meas_type_acc, length, start_idx=start_idx)
-        ratio_mean_first = get_limb_ratio_mean(left_x_y_z, right_x_y_z, meas_type_acc, class_value_left, class_value_right, length, mean_first=True, start_idx=start_idx)
-        ratio_mean = get_limb_ratio_mean(left_x_y_z, right_x_y_z, meas_type_acc, class_value_left, class_value_right, length, mean_first=False, start_idx=start_idx)
+        ratio_mean_first = get_limb_ratio_mean(left_x_y_z, right_x_y_z, meas_type_acc, class_value_left,
+                                               class_value_right, length, mean_first=True, start_idx=start_idx)
+        ratio_mean = get_limb_ratio_mean(left_x_y_z, right_x_y_z, meas_type_acc, class_value_left, class_value_right,
+                                         length, mean_first=False, start_idx=start_idx)
         result.extend([diff_mean, ratio_mean, ratio_mean_first])
 
     return np.expand_dims(np.array(result), axis=0)

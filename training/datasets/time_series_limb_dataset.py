@@ -1,10 +1,10 @@
 import torch
 
-from ai_utils.training_utils.clear_measurements import ClearMeasurements, Limb, MeasType
-from ai_utils.training_utils.pytorch_utils.data_preprocessing import get_3d_arrays_from_df, cut_array_to_length, calculate_euclidean_length, butter_high_pass_filter, moving_average, \
+from training.utils.clear_measurements import ClearMeasurements, Limb, MeasType
+from training.utils.data_preprocessing import get_3d_arrays_from_df, cut_array_to_length, calculate_euclidean_length, butter_high_pass_filter, moving_average, \
     divide_values, down_sampling
-from ai_utils.training_utils.pytorch_utils.datasets.limb_dataset import LimbDataset
-from ai_utils.training_utils.pytorch_utils.feature_extraction import create_multivariate_time_series
+from training.datasets.limb_dataset import LimbDataset
+from training.utils.feature_extraction import create_multivariate_time_series
 
 
 class TimeSeriesLimbDataset(LimbDataset):
@@ -34,6 +34,7 @@ class TimeSeriesLimbDataset(LimbDataset):
                  length: int,
                  sample_per_limb: int,
                  steps_per_epoch: int,
+                 frequency: int,
                  indexing_multiplier: int = 1,
                  indexing_mode: int = 1) -> None:
         super().__init__(data_type,
@@ -43,6 +44,7 @@ class TimeSeriesLimbDataset(LimbDataset):
                          length,
                          sample_per_limb,
                          steps_per_epoch,
+                         frequency,
                          indexing_multiplier,
                          indexing_mode)
 

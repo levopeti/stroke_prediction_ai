@@ -6,7 +6,7 @@ from functools import partial
 from typing import List
 from torchmetrics import Metric
 
-from ai_utils.training_utils.pytorch_utils.loss_and_accuracy import get_correct_predictions
+from training.utils.loss_and_accuracy import get_correct_predictions
 
 
 class LitModel(LightningModule):

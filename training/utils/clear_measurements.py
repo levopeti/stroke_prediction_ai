@@ -1,15 +1,18 @@
 import json
 import os
 import random
-
 import numpy as np
 import pandas as pd
 
 from glob import glob
 from enum import Enum
 from typing import Union, Tuple
+from tqdm import tqdm
 
-from measurement_utils.measure_db import MeasureDB
+from training.utils.converting_utils import ticks_to_h
+from utils.cache_utils import cache
+from training.utils.measure_db import MeasureDB
+from measurement import MeasurementInfo
 
 
 class Side(Enum):
@@ -42,6 +45,9 @@ class ClearMeasurements(object):
                  clear_json_path: str,
                  class_mapping: dict,
                  invert_side: bool,
+                 frequency: int,
+                 training_length_min: int,
+                 step_size_min: int,
                  cache_size: int = 1,
                  **kwargs) -> None:
         assert cache_size > 0, "cache_size must be positive integer"
@@ -49,6 +55,10 @@ class ClearMeasurements(object):
         self.class_mapping = class_mapping
         self.invert_side = invert_side
         self.cache_size = cache_size
+        self.frequency = frequency
+        self.training_length_min = training_length_min
+        self.step_size_min = step_size_min
+
         self.id_path_dict = dict()
         self.cache_dict = dict()
         self.clear_ids_dict = dict()
@@ -57,11 +67,22 @@ class ClearMeasurements(object):
         self.current_meas_key = None
         self.current_df = None
 
-        self.read_csv_path(folder_path)
-        self.read_clear_json(clear_json_path)
+        self.read_csv_path(folder_path)  # self.id_path_dict
+        self.read_clear_json(clear_json_path)  # self.clear_ids_dict, self.all_meas_ids
+        self.meas_info_dict = self.collect_measurement_info(key=(len(self.id_path_dict)), use_cache=True)
 
         # limb_values_dict[type_of_set][limb][class_value] = [(meas_id, side), ...]
         self.limb_values_dict = self.collect_limb_values(print_stat=True)
+
+    @cache
+    def collect_measurement_info(self, *args, **kwargs) -> dict:
+        meas_info_dict = dict()
+        for meas_id, csv_path in tqdm(self.id_path_dict.items(), "collect_measurement_info"):
+            # df = self.get_measurement(meas_id, Side.LEFT, Limb.ARM, MeasType.ACC)
+            df = self.get_measurement(meas_id, tuple(), tuple(), tuple())
+            timestamps = df["epoch"].values
+            meas_info_dict[meas_id] = MeasurementInfo(meas_id, timestamps, self.frequency)
+        return meas_info_dict
 
     def get_meas_id_list(self, data_type: str) -> list:
         return sorted(self.clear_ids_dict[data_type])
@@ -188,40 +209,60 @@ class ClearMeasurements(object):
     def collect_limb_values(self, print_stat=False) -> dict:
         num_of_classes = len(set(self.class_mapping.values())) if self.class_mapping is not None else 6
         limb_values_dict = dict()
+        stat_dict = dict()
         for type_of_set, id_list in self.clear_ids_dict.items():
             limb_values_dict[type_of_set] = {Limb.ARM: {class_value: list() for class_value in range(num_of_classes)},
                                              Limb.LEG: {class_value: list() for class_value in range(num_of_classes)}}
+            stat_dict[type_of_set] = {Limb.ARM: {class_value: [0, 0] for class_value in range(num_of_classes)},
+                                      Limb.LEG: {class_value: [0, 0] for class_value in range(num_of_classes)}}
             for meas_id in id_list:
+                length = self.meas_info_dict[meas_id].get_length()
                 for limb in Limb:
                     for side in Side:
                         class_value = self.get_limb_class_value(meas_id, side, limb)
                         limb_values_dict[type_of_set][limb][class_value].append((meas_id, side))
+                        stat_dict[type_of_set][limb][class_value][0] += 1
+                        stat_dict[type_of_set][limb][class_value][1] += length
 
         if print_stat:
-            for type_of_set, limb_dict in limb_values_dict.items():
+            for type_of_set, limb_dict in stat_dict.items():
                 print("\n", type_of_set)
                 for limb, class_value_dict in limb_dict.items():
-                    total = sum([len(inside_list) for inside_list in class_value_dict.values()])
+                    # total = sum([len(inside_list) for inside_list in class_value_dict.values()])
+                    total = sum([i[0] for i in class_value_dict.values()])
+                    total_h = sum([i[1] for i in class_value_dict.values()])
                     print(limb)
                     for class_value in range(num_of_classes):
-                        print("{}: {} {:.1f}%".format(class_value,
-                                                      len(class_value_dict[class_value]),
-                                                      100 * len(class_value_dict[class_value]) / total))
+                        print("{}: {} {:.1f}%, {:.1f}h {:.1f}%".format(class_value,
+                                                                       class_value_dict[class_value][0],
+                                                                       100 * class_value_dict[class_value][0] / total,
+                                                                       ticks_to_h(class_value_dict[class_value][1],
+                                                                                  self.frequency),
+                                                                       100 * class_value_dict[class_value][
+                                                                           1] / total_h
+                                                                       ))
         return limb_values_dict
 
     def print_stat(self) -> None:
         stat_dict = dict()
         for type_of_set, id_list in self.clear_ids_dict.items():
-            stat_dict[type_of_set] = {class_value: 0 for class_value in range(6)}
+            stat_dict[type_of_set] = {class_value: [0, 0] for class_value in range(6)}
 
             for meas_id in id_list:
                 min_class_value = self.get_min_class_value(meas_id)
-                stat_dict[type_of_set][min_class_value] += 1
+                stat_dict[type_of_set][min_class_value][0] += 1
+                length = self.meas_info_dict[meas_id].get_length()
+                stat_dict[type_of_set][min_class_value][1] += length
 
         for type_of_set, class_value_dict in stat_dict.items():
-            total = sum(class_value_dict.values())
+            total = sum([i[0] for i in class_value_dict.values()])
+            total_samples = sum([i[1] for i in class_value_dict.values()])
             print("\n", type_of_set)
             for class_value in range(6):
-                print("{}: {} {:.1f}%".format(class_value,
-                                              class_value_dict[class_value],
-                                              100 * class_value_dict[class_value] / total))
+                print("{}: {} {:.1f}%, {:.1f}h {:.1f}%".format(class_value,
+                                                               class_value_dict[class_value][0],
+                                                               100 * class_value_dict[class_value][0] / total,
+                                                               ticks_to_h(class_value_dict[class_value][1],
+                                                                          self.frequency),
+                                                               100 * class_value_dict[class_value][1] / total_samples
+                                                               ))

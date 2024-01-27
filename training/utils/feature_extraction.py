@@ -2,7 +2,7 @@ import numpy as np
 
 # from numba import njit
 from typing import Dict
-from ai_utils.training_utils.clear_measurements import Key
+from training.utils.clear_measurements import Key
 
 
 def get_features(meas_arrays: Dict[Key, np.ndarray]) -> np.ndarray:
