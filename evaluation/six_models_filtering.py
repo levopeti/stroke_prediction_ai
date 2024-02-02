@@ -49,7 +49,7 @@ if __name__ == "__main__":
     model_folder_path = "./models"
     model_dict = get_model_dict(model_folder_path)
 
-    avg_prob_threshold = 0.7
+    avg_prob_threshold = 0.8
     max_window_length_sec = 60 * 60
     step_size_sec = 20
 

@@ -72,7 +72,7 @@ if __name__ == "__main__":
     # model_dict = get_model_dict()
 
     model_folder = "./models"
-    for model_path in sorted(glob(os.path.join(model_folder, "*.pt")))[1:]:
+    for model_path in sorted(glob(os.path.join(model_folder, "*.pt"))):
         model_name = model_path.split("/")[-1].split(".")[0]
         training_length_min = int(model_name.split("_")[1])
 
