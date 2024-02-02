@@ -27,12 +27,6 @@ def get_features(meas_arrays: Dict[Key, np.ndarray]) -> np.ndarray:
         feature_vector_list.append(features)
     return np.concatenate(feature_vector_list)
 
+
 def create_multivariate_time_series(meas_arrays: Dict[Key, np.ndarray]) -> np.ndarray:
     return np.concatenate([np.expand_dims(array, axis=0) for array in meas_arrays.values()], axis=0)
-
-
-
-
-
-
-

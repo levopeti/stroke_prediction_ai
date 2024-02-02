@@ -1,6 +1,7 @@
 import os
 import torch
 import pytorch_lightning as pl
+import matplotlib.pyplot as plt
 
 from datetime import datetime
 from pprint import pprint
@@ -21,8 +22,10 @@ from nn_models.define_model import model_dict
 from training.utils.lit_model import LitModel
 from training.utils.loss_and_accuracy import MSELoss, StrokeLoss, StrokeAccuracy, Accuracy, OnlyFiveAccuracy
 from training.utils.measure_db import MeasureDB
+from utils.arg_parser_and_config import get_config_dict
 
-torch.multiprocessing.set_start_method('spawn', force=True)
+plt.switch_backend("agg")
+torch.multiprocessing.set_start_method("spawn", force=True)
 
 
 def train(params: dict):
@@ -37,9 +40,9 @@ def train(params: dict):
 
     train_dataset, val_dataset = get_dataset(params, clear_measurements)
     train_loader = DataLoader(train_dataset, batch_size=params["train_batch_size"], shuffle=False,
-                              num_workers=params["num_workers"])
+                              num_workers=params["num_workers"], persistent_workers=True)
     val_loader = DataLoader(val_dataset, batch_size=params["val_batch_size"], shuffle=False,
-                            num_workers=params["num_workers"])
+                            num_workers=params["num_workers"], persistent_workers=True)
 
     optimizer = partial(torch.optim.Adam, lr=params["learning_rate"], weight_decay=params["wd"], amsgrad=True)
     metric_list = [Accuracy().to(params["device"]), StrokeAccuracy(params["output_shape"] - 1).to(params["device"]),
@@ -65,7 +68,7 @@ def train(params: dict):
         assert params["output_shape"] == 1, params["output_shape"]
         loss_list = [MSELoss()]  # , StrokeLoss(params["stroke_loss_factor"])]
 
-    early_stop_callback = EarlyStopping(monitor="train_acc", min_delta=0.00, patience=params["patience"], mode="max")
+    early_stop_callback = EarlyStopping(monitor="val_acc", min_delta=0.00, patience=params["patience"], mode="max")
     checkpoint_callback = ModelCheckpoint(dirpath=params["model_base_path"], save_top_k=1, monitor="val_acc",
                                           mode="max")
 
@@ -91,47 +94,48 @@ def train(params: dict):
 if __name__ == "__main__":
     # PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python tensorboard --logdir ./models
     # os.environ["CUDA_VISIBLE_DEVICES"] = ""
-    param_dict = {
-        # data info
-        "accdb_path": "./data/WUS-v4measure20240116.accdb",
-        "ucanaccess_path": "./ucanaccess/",
-        "folder_path": "./data/clear_and_synchronized/",
-        "clear_json_path": "./data/clear_train_val_ids.json",
-        "model_base_path": "./models/{}".format(datetime.now().strftime('%Y-%m-%d-%H-%M')),
-        "model_checkpoint_folder_path": None,  # None
-
-        # measurement info
-        "frequency": 25,  # HZ
-        "training_length_min": 90,
-        "step_size_min": 5,
-        "limb": Limb.ARM,
-
-        # model info
-        "model_type": "inception_time",  # mlp, inception_time
-        "input_shape": 2,  # 18 - features, 2 - acc, gyr
-        "output_shape": 3,  # depends on the class mapping
-        "layer_sizes": [1024, 512, 256],  # only for mlp
-
-        # dataset
-        "invert_side": False,
-        "class_mapping": {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2},  # None, {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2}
-        "train_sample_per_meas": 10,
-        "val_sample_per_meas": 500,  # 500
-        "indexing_multiplier": 4,
-        "cache_size": 1,
-        "steps_per_epoch": 100,  # 100, only if indexing mode == 0
-
-        # dataloader
-        "train_batch_size": 100,  # 100
-        "val_batch_size": 100,
-        "num_workers": 10,
-
-        # training
-        "learning_rate": 0.0001,
-        "wd": 0.001,
-        "num_epoch": 1000,
-        "stroke_loss_factor": 0.5,  # for stroke loss function
-        "patience": 20,  # early stopping callback
-        "device": "cuda",  # cpu, cuda
-    }
+    # param_dict = {
+    #     # data info
+    #     "accdb_path": "./data/WUS-v4measure20240116.accdb",
+    #     "ucanaccess_path": "./ucanaccess/",
+    #     "folder_path": "./data/clear_and_synchronized/",
+    #     "clear_json_path": "./data/clear_train_val_ids.json",
+    #     "model_base_path": "./models/{}".format(datetime.now().strftime('%Y-%m-%d-%H-%M')),
+    #     "model_checkpoint_folder_path": None,  # None
+    #
+    #     # measurement info
+    #     "frequency": 25,  # HZ
+    #     "training_length_min": 90,
+    #     "step_size_min": 5,
+    #     "limb": Limb.ARM,
+    #
+    #     # model info
+    #     "model_type": "inception_time",  # mlp, inception_time
+    #     "input_shape": 2,  # 18 - features, 2 - acc, gyr
+    #     "output_shape": 3,  # depends on the class mapping
+    #     "layer_sizes": [1024, 512, 256],  # only for mlp
+    #
+    #     # dataset
+    #     "invert_side": False,
+    #     "class_mapping": {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2},  # None, {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2}
+    #     "train_sample_per_meas": 10,
+    #     "val_sample_per_meas": 500,  # 500
+    #     "indexing_multiplier": 4,
+    #     "cache_size": 1,
+    #     "steps_per_epoch": 100,  # 100, only if indexing mode == 0
+    #
+    #     # dataloader
+    #     "train_batch_size": 100,  # 100
+    #     "val_batch_size": 100,
+    #     "num_workers": 5,
+    #
+    #     # training
+    #     "learning_rate": 0.0001,
+    #     "wd": 0.001,
+    #     "num_epoch": 1000,
+    #     "stroke_loss_factor": 0.5,  # for stroke loss function
+    #     "patience": 20,  # early stopping callback
+    #     "device": "cuda",  # cpu, cuda
+    # }
+    param_dict = get_config_dict()
     train(param_dict)

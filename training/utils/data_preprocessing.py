@@ -80,7 +80,7 @@ def moving_average(meas_1d_arrays: Dict[Key, np.ndarray], window_size: int) -> D
 
 
 def down_sampling(meas_1d_arrays: Dict[Key, np.ndarray], subsampling_factor: int):
-    # 135000 / 50 = 2700
+    # 135000 / 50 = 2700 (90 min)
     for key, array_1d in meas_1d_arrays.items():
         meas_1d_arrays[key] = array_1d[::subsampling_factor]
     return meas_1d_arrays

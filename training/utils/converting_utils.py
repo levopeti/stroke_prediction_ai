@@ -1,6 +1,12 @@
 def min_to_ticks(time_min: int, frequency: int) -> int:
-    # min -> sec -> sec / Hz
+    # min -> sec -> sec * Hz
     num_of_tick = int(time_min * 60 * frequency)
+    return num_of_tick
+
+
+def sec_to_ticks(time_sec: int, frequency: int) -> int:
+    # sec -> sec * Hz
+    num_of_tick = int(time_sec * frequency)
     return num_of_tick
 
 

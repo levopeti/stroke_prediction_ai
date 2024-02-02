@@ -12,7 +12,7 @@ from tqdm import tqdm
 from training.utils.converting_utils import ticks_to_h
 from utils.cache_utils import cache
 from training.utils.measure_db import MeasureDB
-from measurement import MeasurementInfo
+from training.datasets.measurement_info import MeasurementInfo
 
 
 class Side(Enum):
@@ -47,7 +47,7 @@ class ClearMeasurements(object):
                  invert_side: bool,
                  frequency: int,
                  training_length_min: int,
-                 step_size_min: int,
+                 step_size_min: Union[int, None],
                  cache_size: int = 1,
                  **kwargs) -> None:
         assert cache_size > 0, "cache_size must be positive integer"
@@ -69,10 +69,12 @@ class ClearMeasurements(object):
 
         self.read_csv_path(folder_path)  # self.id_path_dict
         self.read_clear_json(clear_json_path)  # self.clear_ids_dict, self.all_meas_ids
-        self.meas_info_dict = self.collect_measurement_info(key=(len(self.id_path_dict)), use_cache=True)
+        self.meas_info_dict = self.collect_measurement_info(
+            key="_".join([str(len(self.id_path_dict)), str(self.training_length_min), str(self.frequency)]),
+            use_cache=True)
 
         # limb_values_dict[type_of_set][limb][class_value] = [(meas_id, side), ...]
-        self.limb_values_dict = self.collect_limb_values(print_stat=True)
+        self.limb_values_dict, self.num_of_samples_dict = self.collect_limb_values(print_stat=True)
 
     @cache
     def collect_measurement_info(self, *args, **kwargs) -> dict:
@@ -186,37 +188,22 @@ class ClearMeasurements(object):
                 #     print("Number of cached measurements ({}) is more than the cache size ({})".format(len(self.cache_dict), self.cache_size))
         return df
 
-    def collect_healthy_ids(self, data_type) -> list:
-        healthy_ids = list()
-        ids = self.all_meas_ids if data_type == "all" else self.clear_ids_dict[data_type]
-        for meas_id in ids:
-            min_class_value = self.get_min_class_value(meas_id)
-
-            if min_class_value == 5:
-                healthy_ids.append(meas_id)
-        return healthy_ids
-
-    def collect_stroke_ids(self, data_type) -> list:
-        stroke_ids = list()
-        ids = self.all_meas_ids if data_type == "all" else self.clear_ids_dict[data_type]
-        for meas_id in ids:
-            min_class_value = self.get_min_class_value(meas_id)
-
-            if min_class_value < 5:
-                stroke_ids.append(meas_id)
-        return stroke_ids
-
-    def collect_limb_values(self, print_stat=False) -> dict:
+    def collect_limb_values(self, print_stat=False) -> Tuple[dict, dict]:
         num_of_classes = len(set(self.class_mapping.values())) if self.class_mapping is not None else 6
         limb_values_dict = dict()
         stat_dict = dict()
+        num_of_samples_dict = dict()
         for type_of_set, id_list in self.clear_ids_dict.items():
             limb_values_dict[type_of_set] = {Limb.ARM: {class_value: list() for class_value in range(num_of_classes)},
                                              Limb.LEG: {class_value: list() for class_value in range(num_of_classes)}}
             stat_dict[type_of_set] = {Limb.ARM: {class_value: [0, 0] for class_value in range(num_of_classes)},
                                       Limb.LEG: {class_value: [0, 0] for class_value in range(num_of_classes)}}
+            num_of_samples_dict[type_of_set] = dict()
             for meas_id in id_list:
                 length = self.meas_info_dict[meas_id].get_length()
+                num_of_samples = self.meas_info_dict[meas_id].get_number_of_samples(self.training_length_min,
+                                                                                    self.step_size_min)
+                num_of_samples_dict[type_of_set][meas_id] = num_of_samples
                 for limb in Limb:
                     for side in Side:
                         class_value = self.get_limb_class_value(meas_id, side, limb)
@@ -241,7 +228,7 @@ class ClearMeasurements(object):
                                                                        100 * class_value_dict[class_value][
                                                                            1] / total_h
                                                                        ))
-        return limb_values_dict
+        return limb_values_dict, num_of_samples_dict
 
     def print_stat(self) -> None:
         stat_dict = dict()
@@ -266,3 +253,23 @@ class ClearMeasurements(object):
                                                                           self.frequency),
                                                                100 * class_value_dict[class_value][1] / total_samples
                                                                ))
+
+    def collect_healthy_ids(self, data_type) -> list:
+        healthy_ids = list()
+        ids = self.all_meas_ids if data_type == "all" else self.clear_ids_dict[data_type]
+        for meas_id in ids:
+            min_class_value = self.get_min_class_value(meas_id)
+
+            if min_class_value == 5:
+                healthy_ids.append(meas_id)
+        return healthy_ids
+
+    def collect_stroke_ids(self, data_type) -> list:
+        stroke_ids = list()
+        ids = self.all_meas_ids if data_type == "all" else self.clear_ids_dict[data_type]
+        for meas_id in ids:
+            min_class_value = self.get_min_class_value(meas_id)
+
+            if min_class_value < 5:
+                stroke_ids.append(meas_id)
+        return stroke_ids
