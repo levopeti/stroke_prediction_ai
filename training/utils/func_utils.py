@@ -19,7 +19,7 @@ def save_params(params: dict):
             params_to_save[key] = params_to_save[key].value
 
     with open(os.path.join(params_to_save["model_base_path"], "params.json"), "w") as f:
-        json.dump(params_to_save, f)
+        json.dump(params_to_save, f, indent=4, sort_keys=True)
 
 
 def calculate_diff(x_y_z, meas_type_acc) -> np.ndarray:

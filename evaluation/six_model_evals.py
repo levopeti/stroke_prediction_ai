@@ -55,7 +55,7 @@ if __name__ == "__main__":
         "clear_json_path": "./data/clear_train_val_ids.json",
 
         # measurement info
-        "frequency": 25,  # HZ
+        "base_frequency": 25,  # HZ
         "training_length_min": 90,
         "step_size_sec": 20,
         "step_size_min": 5,  # only for ClearMeasurements
@@ -93,14 +93,12 @@ if __name__ == "__main__":
                     array_dict = step_1(df)
                     num_of_samples = meas_info.get_number_of_samples(training_length_min,
                                                                      step_size_sec=params["step_size_sec"])
-
                     predictions = list()
-                    timestamps = list()
                     for idx in range(num_of_samples):  # , "{} {}".format(meas_id, side.value)):
                         _start_idx, _ = meas_info.get_sample_start_end_index(idx, training_length_min,
                                                                              step_size_sec=params["step_size_sec"])
                         sample_array = step_2(array_dict, _start_idx,
-                                              min_to_ticks(training_length_min, params["frequency"]))
+                                              min_to_ticks(training_length_min, params["base_frequency"]))
                         batch.append(np.expand_dims(sample_array, axis=0))
                         batch_idx += 1
 

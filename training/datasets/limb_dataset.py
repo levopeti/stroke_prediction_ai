@@ -31,6 +31,7 @@ class LimbDataset(Dataset):
                  data_type: str,  # train or validation
                  clear_measurements: ClearMeasurements,
                  limb: Limb,
+                 param_dict: dict,
                  batch_size: int,
                  length: int,
                  sample_per_limb: int,
@@ -41,11 +42,13 @@ class LimbDataset(Dataset):
         super().__init__()
         self.data_type = data_type
         self.limb = limb
+        self.param_dict = param_dict
         self.batch_size = batch_size
         self.meas_id_list = clear_measurements.get_meas_id_list(data_type)
         self.clear_measurements = clear_measurements
         self.sample_per_limb = sample_per_limb
-        self.length = min_to_ticks(length, frequency)
+        self.length_min = length
+        self.length = min_to_ticks(self.length_min, param_dict["dst_frequency"])
         self.steps_per_epoch = steps_per_epoch
         self.indexing_multiplier = indexing_multiplier
         self.indexing_mode = indexing_mode
@@ -92,7 +95,8 @@ class LimbDataset(Dataset):
 
     def __getitem__(self, idx):
         meas_df, meas_id, side = self.get_meas_df(idx)
-        start_idx = random.randint(0, len(meas_df) - (self.length + 1))
+        subsampling_factor = round(self.param_dict["base_frequency"] / self.param_dict["dst_frequency"])
+        start_idx = random.randint(0, len(meas_df[::subsampling_factor]) - (self.length + 1))
         input_tensor = self.get_input_tensor(meas_df, start_idx)
         label = self.clear_measurements.get_limb_class_value(meas_id, side, self.limb)
         return input_tensor, label

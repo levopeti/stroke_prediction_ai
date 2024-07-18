@@ -1,3 +1,4 @@
+import json
 import os
 import torch
 import pytorch_lightning as pl
@@ -88,54 +89,16 @@ def train(params: dict):
                          log_every_n_steps=10,
                          accelerator=params["device"],
                          devices=1)
-    trainer.fit(lit_model, train_loader, val_loader, ckpt_path=ckpt_path)
+    trainer.fit(lit_model, train_loader, val_loader)
+    log = trainer.validate(model=lit_model, dataloaders=val_loader, ckpt_path="best", verbose=True)
+
+    with open(os.path.join(params["model_base_path"], "eval_log_acc_{:.2f}.json".format(log[0]["val_acc"])), "w") as f:
+        json.dump(log[0], f, indent=4, sort_keys=True)
 
 
 if __name__ == "__main__":
     # PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python tensorboard --logdir ./models
     # os.environ["CUDA_VISIBLE_DEVICES"] = ""
-    # param_dict = {
-    #     # data info
-    #     "accdb_path": "./data/WUS-v4measure20240116.accdb",
-    #     "ucanaccess_path": "./ucanaccess/",
-    #     "folder_path": "./data/clear_and_synchronized/",
-    #     "clear_json_path": "./data/clear_train_val_ids.json",
-    #     "model_base_path": "./models/{}".format(datetime.now().strftime('%Y-%m-%d-%H-%M')),
-    #     "model_checkpoint_folder_path": None,  # None
-    #
-    #     # measurement info
-    #     "frequency": 25,  # HZ
-    #     "training_length_min": 90,
-    #     "step_size_min": 5,
-    #     "limb": Limb.ARM,
-    #
-    #     # model info
-    #     "model_type": "inception_time",  # mlp, inception_time
-    #     "input_shape": 2,  # 18 - features, 2 - acc, gyr
-    #     "output_shape": 3,  # depends on the class mapping
-    #     "layer_sizes": [1024, 512, 256],  # only for mlp
-    #
-    #     # dataset
-    #     "invert_side": False,
-    #     "class_mapping": {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2},  # None, {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2}
-    #     "train_sample_per_meas": 10,
-    #     "val_sample_per_meas": 500,  # 500
-    #     "indexing_multiplier": 4,
-    #     "cache_size": 1,
-    #     "steps_per_epoch": 100,  # 100, only if indexing mode == 0
-    #
-    #     # dataloader
-    #     "train_batch_size": 100,  # 100
-    #     "val_batch_size": 100,
-    #     "num_workers": 5,
-    #
-    #     # training
-    #     "learning_rate": 0.0001,
-    #     "wd": 0.001,
-    #     "num_epoch": 1000,
-    #     "stroke_loss_factor": 0.5,  # for stroke loss function
-    #     "patience": 20,  # early stopping callback
-    #     "device": "cuda",  # cpu, cuda
-    # }
+
     param_dict = get_config_dict()
     train(param_dict)

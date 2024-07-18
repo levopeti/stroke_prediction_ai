@@ -1,12 +1,10 @@
 import numpy as np
 
-# from numba import njit
 from typing import Dict
 from training.utils.clear_measurements import Key
 
 
 def get_features(meas_arrays: Dict[Key, np.ndarray]) -> np.ndarray:
-    # @njit
     def calculate_features(np_array: np.ndarray) -> np.ndarray:
         mean = np.mean(np_array)
         median = np.median(np_array)

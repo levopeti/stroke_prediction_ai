@@ -1,12 +1,11 @@
 import argparse
-from datetime import datetime
-
 import git
 import sys
 import subprocess
 import yaml
 import os
 
+from datetime import datetime
 from training.utils.clear_measurements import Limb
 
 
@@ -47,7 +46,12 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--name', default="", type=str,
                         help='Model folder name is the date and the name parameter.')
     parser.add_argument('--invert_side', default=False, action='store_true', help='Invert the side to get the label.')
-    parser.add_argument('--training_length_min', default=90, type=int, help='Considered time for prediction in minutes.')
+    parser.add_argument('--training_length_min', default=90, type=int,
+                        help='Considered time for prediction in minutes.')
+    parser.add_argument('--subsampling_factor', default=50, type=int,
+                        help='Subsampling factor in down_sampling preprocess step.')
+    parser.add_argument('--dst_frequency', default=25., type=float,
+                        help='Modify frequency in change_frequency preprocess step.')
     parser.add_argument('--discord', default=False, action='store_true', help='Run discord webhook.')
 
     args = parser.parse_args()
@@ -65,7 +69,7 @@ def get_other_config() -> dict:
         "model_checkpoint_folder_path": None,  # None
 
         # measurement info
-        "frequency": 25,  # HZ
+        "base_frequency": 25,  # HZ
         # "training_length_min": 90,
         "step_size_min": 5,
         "limb": Limb.ARM,
@@ -84,11 +88,12 @@ def get_other_config() -> dict:
         "indexing_multiplier": 4,
         "cache_size": 1,
         "steps_per_epoch": 100,  # 100, only if indexing mode == 0
+        # "subsampling_factor": 50,  # 50
 
         # dataloader
         "train_batch_size": 100,  # 100
         "val_batch_size": 100,
-        "num_workers": 5,
+        "num_workers": 8,
 
         # training
         "learning_rate": 0.0001,
@@ -113,6 +118,7 @@ def get_config_dict() -> dict:
     config_dict.update(vars(args))
     config_dict.update(get_other_config())
     config_dict = add_model_path(config_dict)
+    assert config_dict["base_frequency"] >= config_dict["dst_frequency"]
     return config_dict
 
 

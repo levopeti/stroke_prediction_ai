@@ -45,7 +45,7 @@ class ClearMeasurements(object):
                  clear_json_path: str,
                  class_mapping: dict,
                  invert_side: bool,
-                 frequency: int,
+                 base_frequency: int,
                  training_length_min: int,
                  step_size_min: Union[int, None],
                  cache_size: int = 1,
@@ -55,7 +55,7 @@ class ClearMeasurements(object):
         self.class_mapping = class_mapping
         self.invert_side = invert_side
         self.cache_size = cache_size
-        self.frequency = frequency
+        self.base_frequency = base_frequency
         self.training_length_min = training_length_min
         self.step_size_min = step_size_min
 
@@ -70,7 +70,7 @@ class ClearMeasurements(object):
         self.read_csv_path(folder_path)  # self.id_path_dict
         self.read_clear_json(clear_json_path)  # self.clear_ids_dict, self.all_meas_ids
         self.meas_info_dict = self.collect_measurement_info(
-            key="_".join([str(len(self.id_path_dict)), str(self.training_length_min), str(self.frequency)]),
+            key="_".join([str(len(self.id_path_dict)), str(self.training_length_min), str(self.base_frequency)]),
             use_cache=True)
 
         # limb_values_dict[type_of_set][limb][class_value] = [(meas_id, side), ...]
@@ -83,7 +83,7 @@ class ClearMeasurements(object):
             # df = self.get_measurement(meas_id, Side.LEFT, Limb.ARM, MeasType.ACC)
             df = self.get_measurement(meas_id, tuple(), tuple(), tuple())
             timestamps = df["epoch"].values
-            meas_info_dict[meas_id] = MeasurementInfo(meas_id, timestamps, self.frequency)
+            meas_info_dict[meas_id] = MeasurementInfo(meas_id, timestamps, self.base_frequency)
         return meas_info_dict
 
     def get_meas_id_list(self, data_type: str) -> list:
@@ -224,7 +224,7 @@ class ClearMeasurements(object):
                                                                        class_value_dict[class_value][0],
                                                                        100 * class_value_dict[class_value][0] / total,
                                                                        ticks_to_h(class_value_dict[class_value][1],
-                                                                                  self.frequency),
+                                                                                  self.base_frequency),
                                                                        100 * class_value_dict[class_value][
                                                                            1] / total_h
                                                                        ))
@@ -250,7 +250,7 @@ class ClearMeasurements(object):
                                                                class_value_dict[class_value][0],
                                                                100 * class_value_dict[class_value][0] / total,
                                                                ticks_to_h(class_value_dict[class_value][1],
-                                                                          self.frequency),
+                                                                          self.base_frequency),
                                                                100 * class_value_dict[class_value][1] / total_samples
                                                                ))
 

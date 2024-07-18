@@ -20,8 +20,7 @@ def get_predictions(_model_name, _meas_id, _side, limb="arm", _training_length_m
         num_of_samples = _meas_info.get_number_of_samples(_training_length_min, step_size_sec=params["step_size_sec"])
         return np.random.rand(num_of_samples, 3)
     else:
-        with open("./predictions/{}/{}_{}_{}.npy".format(_model_name, _meas_id, limb, _side.value),
-                  "rb") as f:
+        with open("./predictions/{}/{}_{}_{}.npy".format(_model_name, _meas_id, limb, _side.value), "rb") as f:
             _predictions = np.load(f)
         return _predictions
 
@@ -55,7 +54,7 @@ if __name__ == "__main__":
         "clear_json_path": "./data/clear_train_val_ids.json",
 
         # measurement info
-        "frequency": 25,  # HZ
+        "base_frequency": 25,  # HZ
         "training_length_min": 90,  # only for ClearMeasurements
         "step_size_min": 5,
         "step_size_sec": 20,
@@ -67,6 +66,7 @@ if __name__ == "__main__":
         "class_mapping": {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2},  # None, {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2}
         "num_of_classes": 3}
 
+    save_roc = False
     measDB = MeasureDB(params["accdb_path"], params["ucanaccess_path"])
     clear_measurements = ClearMeasurements(measDB, **params)
 
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         training_length_min = int(training_length_min_str)
 
         for data_type in ["train", "validation"]:
-            folder_path = "./filter_results/{}_{}/".format(model_name, data_type)
+            folder_path = "./filter_results/1.0.2/{}_{}/".format(model_name, data_type)
             os.makedirs(folder_path, exist_ok=True)
             metrics_list = list()
             metrics_dict = {"window (s)": list(),
@@ -94,9 +94,9 @@ if __name__ == "__main__":
                             "precision": list(),
                             }
 
-            for avg_prob_threshold in tqdm([0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95],
+            for avg_prob_threshold in tqdm([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 0.96, 0.97, 0.98, 0.99, 1],
                                            desc="{} {}".format(model_name, data_type)):
-                for window_length_sec in [20, 60, 2 * 60, 5 * 60, 10 * 60, 30 * 60, 60 * 60, 90 * 60, 120 * 60]:
+                for window_length_sec in [20, 60, 2 * 60, 5 * 60, 10 * 60, 30 * 60, 60 * 60, 90 * 60, 120 * 60, 180 * 60, 240 * 60]:
                     # if int(window_length_sec / 60) > training_length_min:
                     #     continue
                     window_length = int(window_length_sec / params["step_size_sec"])
@@ -119,7 +119,7 @@ if __name__ == "__main__":
                             if window_length > 1:
                                 probabilities_of_stroke = probabilities_of_stroke[window_length - 1:]
                                 avg_pred_is_stroke = sliding_window_view(pred_is_stroke, window_length).mean(axis=1)
-                                pred_is_stroke = (avg_pred_is_stroke > avg_prob_threshold).astype(int)
+                                pred_is_stroke = (avg_pred_is_stroke >= avg_prob_threshold).astype(int)
                                 avg_pred_is_stroke_list.append(avg_pred_is_stroke)
 
                             prob_is_stroke_list.append(probabilities_of_stroke)
@@ -138,9 +138,10 @@ if __name__ == "__main__":
                     is_stroke_list = np.concatenate(is_stroke_list)
                     pred_is_stroke_list = np.concatenate(pred_is_stroke_list)
                     prob_is_stroke_list = np.concatenate(prob_is_stroke_list)
-                    save_roc_curve(folder_path, is_stroke_list, prob_is_stroke_list, "prob")
+                    if save_roc:
+                        save_roc_curve(folder_path, is_stroke_list, prob_is_stroke_list, "prob")
 
-                    if len(avg_pred_is_stroke_list) > 0:
+                    if save_roc and len(avg_pred_is_stroke_list) > 0:
                         avg_pred_is_stroke_list = np.concatenate(avg_pred_is_stroke_list)
                         save_roc_curve(folder_path, is_stroke_list, avg_pred_is_stroke_list, "avg_pred")
 
@@ -173,8 +174,8 @@ if __name__ == "__main__":
                     metrics_list.append("specificity: {:.2f}\n".format(specificity * 100))
                     metrics_list.append("precision: {:.2f}\n\n".format(precision * 100))
 
-            with open(os.path.join(folder_path, "metrics.txt"), "a+") as f:
-                f.writelines(metrics_list)
+            with open(os.path.join(folder_path, "metrics.txt"), "a+") as _f:
+                _f.writelines(metrics_list)
 
             metrics_df = pd.DataFrame.from_dict(metrics_dict)
             pt_dict = dict()

@@ -26,9 +26,18 @@ def get_3d_arrays_from_df(meas_df: pd.DataFrame) -> Dict[Key, np.ndarray]:
     return array_3d_dict
 
 
-def butter_high_pass_filter(meas_3d_arrays: Dict[Key, np.ndarray]) -> Dict[Key, np.ndarray]:
+def change_frequency(meas_3d_arrays: Dict[Key, np.ndarray], base_freq: int, dst_freq: int) -> Dict[Key, np.ndarray]:
+    subsampling_factor = round(base_freq / dst_freq)
+    for key, array_3d in meas_3d_arrays.items():
+        meas_3d_arrays[key] = array_3d[::subsampling_factor]
+    return meas_3d_arrays
+
+
+def butter_high_pass_filter(meas_3d_arrays: Dict[Key, np.ndarray],
+                            frequency: int,
+                            wn: Union[int, float]) -> Dict[Key, np.ndarray]:
     """ fifth-order Butterworth filter with a cut-off frequency of 3 Hz """
-    sos = signal.butter(5, 3, "highpass", output="sos", fs=25)
+    sos = signal.butter(5, wn, "highpass", output="sos", fs=frequency)
     for key, array_3d in meas_3d_arrays.items():
         filtered_list = list()
         if key[2] == MeasType.ACC:
@@ -84,3 +93,6 @@ def down_sampling(meas_1d_arrays: Dict[Key, np.ndarray], subsampling_factor: int
     for key, array_1d in meas_1d_arrays.items():
         meas_1d_arrays[key] = array_1d[::subsampling_factor]
     return meas_1d_arrays
+
+
+
