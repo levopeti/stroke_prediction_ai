@@ -40,10 +40,16 @@ def train(params: dict):
     save_params(params)
 
     train_dataset, val_dataset = get_dataset(params, clear_measurements)
-    train_loader = DataLoader(train_dataset, batch_size=params["train_batch_size"], shuffle=False,
-                              num_workers=params["num_workers"], persistent_workers=True)
-    val_loader = DataLoader(val_dataset, batch_size=params["val_batch_size"], shuffle=False,
-                            num_workers=params["num_workers"], persistent_workers=True)
+    train_loader = DataLoader(train_dataset,
+                              batch_size=params["train_batch_size"],
+                              shuffle=False,
+                              num_workers=params["num_workers"],
+                              persistent_workers=True)
+    val_loader = DataLoader(val_dataset,
+                            batch_size=params["val_batch_size"],
+                            shuffle=False,
+                            num_workers=params["num_workers"],
+                            persistent_workers=True)
 
     optimizer = partial(torch.optim.Adam, lr=params["learning_rate"], weight_decay=params["wd"], amsgrad=True)
     metric_list = [Accuracy().to(params["device"]), StrokeAccuracy(params["output_shape"] - 1).to(params["device"]),
@@ -78,7 +84,6 @@ def train(params: dict):
         print(ckpt_path)
         lit_model = LitModel.load_from_checkpoint(ckpt_path)
     else:
-        ckpt_path = None
         model = model_dict[params["model_type"]](**params)
         lit_model = LitModel(model=model, loss_list=loss_list, metric_list=metric_list, optimizer=optimizer)
 

@@ -86,6 +86,7 @@ def get_other_config() -> dict:
         "train_sample_per_meas": 10,
         "val_sample_per_meas": 500,  # 500
         "indexing_multiplier": 4,
+        "indexing_mode": 1,
         "cache_size": 1,
         "steps_per_epoch": 100,  # 100, only if indexing mode == 0
         # "subsampling_factor": 50,  # 50
