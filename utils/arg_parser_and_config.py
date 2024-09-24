@@ -76,7 +76,7 @@ def get_other_config() -> dict:
 
         # model info
         "model_type": "inception_time",  # mlp, inception_time
-        "input_shape": 2,  # 18 - features, 2 - acc, gyr
+        "input_shape": 6,  # 18 - features, 2 - acc, gyr
         "output_shape": 3,  # depends on the class mapping
         "layer_sizes": [1024, 512, 256],  # only for mlp
 
@@ -93,7 +93,7 @@ def get_other_config() -> dict:
         # dataloader
         "train_batch_size": 100,  # 100
         "val_batch_size": 100,
-        "num_workers": 8,
+        "num_workers": 6,
 
         # training
         "learning_rate": 0.0001,
