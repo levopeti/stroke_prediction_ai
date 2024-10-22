@@ -42,6 +42,8 @@ def get_model(model_pt_path: str, to_cuda: bool = False) -> torch.nn.Module:
     _model = torch.jit.load(model_pt_path)
     if to_cuda:
         _model.to("cuda")
+    else:
+        _model.to("cpu")
     _model.eval()
     return _model
 

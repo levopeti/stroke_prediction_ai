@@ -33,8 +33,9 @@ class TimeSeriesLimbDataset(LimbDataset):
         array_3d_dict = get_3d_arrays_from_df(meas_df)
         array_3d_dict = change_frequency(array_3d_dict, self.params["base_frequency"],
                                          self.params["dst_frequency"])
-        array_3d_dict = butter_high_pass_filter(array_3d_dict, self.params["dst_frequency"], wn)
+        # TODO: original order: butter_high_pass_filter, cut_array_to_length, calculate_euclidean_length
         cut_array_dict = cut_array_to_length(array_3d_dict, self.length_ticks, start_idx=start_idx)
+        cut_array_dict = butter_high_pass_filter(cut_array_dict, self.params["dst_frequency"], wn)
         euclidean_length_dict = calculate_euclidean_length(cut_array_dict)
         euclidean_length_dict = moving_average(euclidean_length_dict, window_size)
         divided_euclidean_length_dict = divide_values(euclidean_length_dict, 200, MeasType.GYR)

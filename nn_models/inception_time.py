@@ -22,6 +22,7 @@ class InceptionModule(Module):
         """
         super().__init__()
         if in_channels > 1:
+            # input shape: [n, c, l]
             self.bottleneck = Conv1d(in_channels=in_channels,
                                      out_channels=bottleneck_channels,
                                      kernel_size=1,

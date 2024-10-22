@@ -22,6 +22,7 @@ class LimbDataset(Dataset):
         self.meas_id_list = clear_measurements.get_meas_id_list(data_type)
         self.clear_measurements = clear_measurements
         self.length_ticks = min_to_ticks(params["training_length_min"], params["dst_frequency"])
+        self.seq_length_ticks = self.length_ticks // self.params["subsampling_factor"]  # final length
         # self.sample_per_limb = params["train_sample_per_meas"]
         # self.length_min = params["training_length_min"]
         # self.steps_per_epoch = params["steps_per_epoch"]
@@ -35,7 +36,7 @@ class LimbDataset(Dataset):
 
     def __len__(self):
         if self.data_type == "validation":
-            return len(self.meas_id_list) * self.params["train_sample_per_meas"] * self.num_of_sides
+            return len(self.meas_id_list) * self.params["val_sample_per_meas"] * self.num_of_sides
         elif self.data_type == "train":
             if self.params["indexing_mode"] == 0:
                 return self.params["steps_per_epoch"] * self.params["train_batch_size"]

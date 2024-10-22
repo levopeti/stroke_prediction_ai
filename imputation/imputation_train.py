@@ -9,17 +9,14 @@ from glob import glob
 
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from pytorch_lightning.loggers import TensorBoardLogger
-from torch.nn import CrossEntropyLoss
 from torch.utils.data import DataLoader
-from torchmetrics import AUROC, ConfusionMatrix
-from torchmetrics.classification import Accuracy
 from functools import partial
 
+from imputation.imputation_lit_model import ImputationLitModel
 from training.utils.func_utils import save_params
 from training.datasets.get_dataset import get_dataset
-from nn_models.define_model import model_dict
-from training.utils.lit_model import LitModel
-from training.utils.loss_and_accuracy import MSELoss, StrokeLoss, StrokeAccuracy, Accuracy, OnlyFiveAccuracy
+from imputation.get_imputation_model import imputation_model_dict
+from imputation.imputation_loss_and_acc import ImputedLoss, NonImputedLoss
 from utils.arg_parser_and_config import get_config_dict
 
 plt.switch_backend("agg")
@@ -41,44 +38,27 @@ def train(params: dict):
                             num_workers=params["num_workers"],
                             persistent_workers=True)
 
-    params["seq_length"] = train_dataset.seq_length
+    params["seq_length"] = train_dataset.seq_length_ticks
     save_params(params)
 
     optimizer = partial(torch.optim.Adam, lr=params["learning_rate"], weight_decay=params["wd"], amsgrad=True)
-    metric_list = [Accuracy().to(params["device"]), StrokeAccuracy(params["output_shape"] - 1).to(params["device"]),
-                   OnlyFiveAccuracy(params["output_shape"] - 1).to(params["device"])]
-    if params["output_shape"] > 1:
-        # classification problem
-        # num_of_samples = [5, 5, 6, 2, 20, 100]
-        # normed_weights = [1 - (x / sum(num_of_samples)) for x in num_of_samples]
-        # normed_weights = torch.FloatTensor(normed_weights)
-        # print("weights: {}".format(normed_weights))
-        xe = CrossEntropyLoss()  # weight=normed_weights
-        xe.name = "xe_loss"
-        loss_list = [xe, StrokeLoss(params["stroke_loss_factor"], params["output_shape"] - 1)]
-        auroc = AUROC(task="multiclass", num_classes=params["output_shape"]).to(params["device"])
-        auroc.name = "auc"
-        metric_list.append(auroc)
-        confmat = ConfusionMatrix(task="multiclass", num_classes=params["output_shape"], normalize="true").to(
-            params["device"])
-        confmat.name = "confm"
-        metric_list.append(confmat)
-    else:
-        # regression problem
-        assert params["output_shape"] == 1, params["output_shape"]
-        loss_list = [MSELoss()]  # , StrokeLoss(params["stroke_loss_factor"])]
+    metric_list = []
 
-    early_stop_callback = EarlyStopping(monitor="train_acc", min_delta=0.00, patience=params["patience"], mode="max")
-    checkpoint_callback = ModelCheckpoint(dirpath=params["model_base_path"], save_top_k=1, monitor="val_acc",
-                                          mode="max")
+    imp_loss = ImputedLoss(params["scale_factor"])
+    non_imp_loss = NonImputedLoss(params["scale_factor"])
+    loss_list = [imp_loss, non_imp_loss]
+
+    early_stop_callback = EarlyStopping(monitor="train_loss", min_delta=0.00, patience=params["patience"], mode="min")
+    checkpoint_callback = ModelCheckpoint(dirpath=params["model_base_path"], save_top_k=1, monitor="val_loss",
+                                          mode="min")
 
     if params["model_checkpoint_folder_path"] is not None:
         ckpt_path = sorted(glob(os.path.join(params["model_checkpoint_folder_path"], "*.ckpt")))[-1]
         print(ckpt_path)
-        lit_model = LitModel.load_from_checkpoint(ckpt_path)
+        lit_model = ImputationLitModel.load_from_checkpoint(ckpt_path)
     else:
-        model = model_dict[params["model_type"]](**params)
-        lit_model = LitModel(model=model, loss_list=loss_list, metric_list=metric_list, optimizer=optimizer)
+        model = imputation_model_dict[params["model_type"]](**params)
+        lit_model = ImputationLitModel(model=model, loss_list=loss_list, metric_list=metric_list, optimizer=optimizer)
 
     # inference_mode="predict"
     trainer = pl.Trainer(max_epochs=params["num_epoch"],
@@ -91,13 +71,14 @@ def train(params: dict):
     log_train = trainer.validate(model=lit_model, dataloaders=train_loader, ckpt_path="best", verbose=True)
     log_val = trainer.validate(model=lit_model, dataloaders=val_loader, ckpt_path="best", verbose=True)
 
-    with open(os.path.join(params["model_base_path"], "log_acc_{:.2f}.json".format(log_val[0]["val_acc"])), "w") as f:
+    with open(os.path.join(params["model_base_path"], "log_loss_{:.2f}.json".format(log_val[0]["val_loss_epoch"])), "w") as f:
         log = dict(log_val[0])
-        log["train_acc"], log["train_auc"] = log_train[0]["val_acc"], log_train[0]["val_auc"]
+        log["train_loss"], = log_train[0]["val_loss_epoch"]
         json.dump(log, f, indent=4, sort_keys=True)
 
 
 if __name__ == "__main__":
+    """ python -m imputation.imputation_train --name ... """
     # PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python tensorboard --logdir ./models
     # os.environ["CUDA_VISIBLE_DEVICES"] = ""
 

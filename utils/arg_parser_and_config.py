@@ -48,9 +48,9 @@ def get_args() -> argparse.Namespace:
     parser.add_argument('--invert_side', default=False, action='store_true', help='Invert the side to get the label.')
     parser.add_argument('--training_length_min', default=90, type=int,
                         help='Considered time for prediction in minutes.')
-    parser.add_argument('--subsampling_factor', default=50, type=int,
+    parser.add_argument('--subsampling_factor', default=10, type=int,
                         help='Subsampling factor in down_sampling preprocess step.')
-    parser.add_argument('--dst_frequency', default=25., type=float,
+    parser.add_argument('--dst_frequency', default=5., type=float,
                         help='Modify frequency in change_frequency preprocess step.')
     parser.add_argument('--discord', default=False, action='store_true', help='Run discord webhook.')
 
@@ -75,26 +75,50 @@ def get_other_config() -> dict:
         "limb": Limb.ARM,
 
         # model info
-        "model_type": "inception_time",  # mlp, inception_time
-        "input_shape": 6,  # 18 - features, 2 - acc, gyr
+        "model_type": "unet",  # mlp, inception_time, basic_transformer, unet
+        "input_shape": 2,  # 18 - features, 2 - acc, gyr
         "output_shape": 3,  # depends on the class mapping
-        "layer_sizes": [1024, 512, 256],  # only for mlp
+
+        # mlp
+        "mlp_layer_sizes": [1024, 512, 256],
+
+        # inception time
+        "n_filters": 32,
+        "kernel_sizes": (9, 33, 65),  # tuple of three odd values
+        "bottleneck_channels": 32,
+
+        # basic transformer
+        "num_transformer_blocks": 2,
+        "embed_dim": 256,
+        "ff_dim": 1024,
+        "mlp_units": [1024, 256],  # [1024, 512, 256]
+        "dropout": 0,
+        "mlp_dropout": 0,
+
+        # imputation
+        # unet
+        "max_big_gap_size_min": 10,
+        "num_of_small_gaps": 10,
+        "max_small_gap_size_min": 2,
+
+        # loss
+        "scale_factor": 100,
 
         # dataset
         # "invert_side": False,
         "class_mapping": {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2},  # None, {0: 0, 1: 0, 2: 0, 3: 1, 4: 1, 5: 2}
-        "train_sample_per_meas": 10,
-        "val_sample_per_meas": 500,  # 500
-        "indexing_multiplier": 4,
+        "train_sample_per_meas": 10,  # 10
+        "val_sample_per_meas": 50,  # 500
+        "indexing_multiplier": 4,  # 4
         "indexing_mode": 1,
         "cache_size": 1,
         "steps_per_epoch": 100,  # 100, only if indexing mode == 0
         # "subsampling_factor": 50,  # 50
 
         # dataloader
-        "train_batch_size": 100,  # 100
-        "val_batch_size": 100,
-        "num_workers": 6,
+        "train_batch_size": 50,  # 100
+        "val_batch_size": 50,
+        "num_workers": 10,
 
         # training
         "learning_rate": 0.0001,
