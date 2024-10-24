@@ -14,7 +14,7 @@ class ImputedLoss(Module):
         assert predictions.shape == targets.shape, (predictions.shape, targets.shape)
         masked_pred = predictions * (1 - mask)
         masked_targets = targets * (1 - mask)
-        loss = ((masked_pred - masked_targets) ** 2).mean()
+        loss = ((masked_pred - masked_targets) ** 2).sum() / (1 - mask).sum()
         return loss * self.scale_factor
 
 
@@ -29,7 +29,7 @@ class NonImputedLoss(Module):
         assert predictions.shape == targets.shape, (predictions.shape, targets.shape)
         masked_pred = predictions * mask
         masked_targets = targets * mask
-        loss = ((masked_pred - masked_targets) ** 2).mean()
+        loss = ((masked_pred - masked_targets) ** 2).sum() / mask.sum()
         return loss * self.scale_factor
 
 

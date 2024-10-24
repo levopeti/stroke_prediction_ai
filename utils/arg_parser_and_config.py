@@ -98,7 +98,7 @@ def get_other_config() -> dict:
         # imputation
         # unet
         "max_big_gap_size_min": 10,
-        "num_of_small_gaps": 10,
+        "num_of_small_gaps": 6,
         "max_small_gap_size_min": 2,
 
         # loss
@@ -125,7 +125,7 @@ def get_other_config() -> dict:
         "wd": 0.001,
         "num_epoch": 1000,
         "stroke_loss_factor": 0.5,  # for stroke loss function
-        "patience": 30,  # early stopping callback
+        "patience": 15,  # early stopping callback
         "device": "cuda",  # cpu, cuda
     }
     return other_config_dict

@@ -32,8 +32,8 @@ def plot_masked_meas(i, predictions, y, mask, imp_loss_f, non_imp_loss_f):
     imp_loss = imp_loss_f(predictions, y, mask)
     non_imp_loss = non_imp_loss_f(predictions, y, mask)
 
-    plt.title("imp_loss: {:.05f}, non_imp_loss: {:.05f}".format(imp_loss, non_imp_loss))
     fig, axs = plt.subplots(5, 1, facecolor="w")
+    fig.suptitle("imp_loss: {:.05f}, non_imp_loss: {:.05f}".format(imp_loss, non_imp_loss))
     axs[0].plot(mask.T)
     axs[0].legend(['mask'])
     axs[0].grid(True)
@@ -81,7 +81,8 @@ def imputation_visualization(base_folder):
 
     with torch.no_grad():
         for i, (x, y, mask) in enumerate(train_dataset):
-            predictions = model(x.unsqueeze(0))
+            print(x.unsqueeze(0).shape, mask.unsqueeze(0).shape)
+            predictions = model(x.unsqueeze(0), mask.unsqueeze(0))
             plot_masked_meas(i, predictions.squeeze(), y, mask, imp_loss, non_imp_loss)
             exit()
 
@@ -91,5 +92,5 @@ def imputation_visualization(base_folder):
 if __name__ == "__main__":
     """ python -m imputation.vis_imputation """
 
-    _base_folder = "./models/2024-10-21-19-57_imp_3"
+    _base_folder = "./models/2024-10-22-18-02_imp_version_2_resop_no_bias"
     imputation_visualization(_base_folder)

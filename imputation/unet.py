@@ -29,7 +29,7 @@ class UNet(Module):
         self.up4 = Up(128, 64, bilinear)
         self.outc = OutConv(64, n_channels)
 
-    def forward(self, inp: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def forward(self, inp: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
         # version 1
         # x1 = self.inc(inp)
 
@@ -53,7 +53,9 @@ class UNet(Module):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
         x = self.outc(x)
-        # TODO: op = x + inp
+
+        # residual op
+        x = x + inp
         return x
 
     # def use_checkpointing(self):

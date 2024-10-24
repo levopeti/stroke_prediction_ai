@@ -54,6 +54,7 @@ class ImputationDataset(LimbDataset):
         euclidean_length_dict = calculate_euclidean_length(cut_array_dict)
         euclidean_length_dict = moving_average(euclidean_length_dict, window_size)
         divided_euclidean_length_dict = divide_values(euclidean_length_dict, 200, MeasType.GYR)
+        # divided_euclidean_length_dict = divide_values(divided_euclidean_length_dict, 0.1, MeasType.ACC)
         euclidean_length_dict = down_sampling(divided_euclidean_length_dict,
                                               subsampling_factor=self.params["subsampling_factor"])
 

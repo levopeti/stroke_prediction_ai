@@ -73,7 +73,8 @@ def train(params: dict):
 
     with open(os.path.join(params["model_base_path"], "log_loss_{:.2f}.json".format(log_val[0]["val_loss_epoch"])), "w") as f:
         log = dict(log_val[0])
-        log["train_loss"], = log_train[0]["val_loss_epoch"]
+        for key in log_train[0]:
+            log[key.replace("val", "train")] = log_train[0][key]
         json.dump(log, f, indent=4, sort_keys=True)
 
 

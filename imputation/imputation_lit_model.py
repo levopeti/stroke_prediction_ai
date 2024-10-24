@@ -20,7 +20,7 @@ class ImputationLitModel(LightningModule):
         self.loss_list = loss_list
         self.train_metric_list, self.val_metric_list = metric_list, copy.deepcopy(metric_list)
         self.optimizer = optimizer
-        self.save_hyperparameters(ignore=["model"])
+        self.save_hyperparameters()
         self.save_grad = save_grad
 
     def configure_optimizers(self):
